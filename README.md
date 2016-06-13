@@ -7,14 +7,9 @@ This is DRAX, the [DC/OS](https://dcos.io) Resilience Automated Xenodiagnosis to
 Well, actually DRAX is a reverse acronym inspired by the Guardians of the Galaxy character Drax the Destroyer.
 
 
-You might have heard of http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html 
+You might have heard of Netflix's [Chaos Monkey](http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html) or it's containerized [variant](https://medium.com/production-ready/chaos-monkey-for-fun-and-profit-87e2f343db31). Maybe you've seen a [gaming version](https://www.wehkamplabs.com/blog/2016/06/02/docker-and-zombies/) of it or stumbled upon a [lower-level species](http://probablyfine.co.uk/2016/05/30/announcing-byte-monkey/). In any case I assume you're somewhat familiar with chaos-based resilience testing.
 
-https://medium.com/production-ready/chaos-monkey-for-fun-and-profit-87e2f343db31
-
-https://www.wehkamplabs.com/blog/2016/06/02/docker-and-zombies/
-
-http://probablyfine.co.uk/2016/05/30/announcing-byte-monkey/
-
+DRAX is a DC/OS-specific resilience testing tool that works mainly on the task-level. Future work may include node-level up to cluster-level.
 
 ## Installation and usage
 
@@ -40,7 +35,7 @@ Get DRAX and build from source:
 
     $ go get github.com/dcos-labs/drax
     $ go build
-    $ ./drax
+    $ $ MARATHON_URL=http://localhost:8080 ./drax
     INFO[0000] Using Marathon at  http://localhost:8080      main=init
     INFO[0000] On destruction level 0                        main=init
     INFO[0000] I will destroy 2 tasks on a rampage           main=init
@@ -101,11 +96,7 @@ Will trigger a destruction run on a certain destruction level (see also configur
 
 To target any non-framework app, set the level of destruction (using the `level` parameter) to `0`, for example, `/rampage?level=0` will destroy random tasks of any apps.
 
-To test it locally, run:
-
-    $ MARATHON_URL=http://localhost:8080 drax
-
-And invoke with default level (any taks on any app):
+Invoke with default level (any tasks in any app):
 
     $ http POST localhost:7777/rampage
     HTTP/1.1 200 OK
@@ -119,11 +110,7 @@ And invoke with default level (any taks on any app):
 
 To target a specific (non-framework) app, set the level of destruction to `1` and specify the Marathon app id using the the `app` parameter. For example, `/rampage?level=1&app=dummy` will destroy random tasks of the app with the Marathon ID `/dummy`.
 
-To test it locally, run:
-
-    $ MARATHON_URL=http://localhost:8080 drax
-
-And invoke like so (to destroy tasks of app `/dummy`):
+Invoke like so (to destroy tasks of app `/dummy`):
 
     $ cat rp.json
     {
