@@ -29,9 +29,10 @@ const (
 )
 
 var (
-	mux              *http.ServeMux
-	destructionLevel DestructionLevel = DL_BASIC
-	marathonURL      string
+	mux                *http.ServeMux
+	marathonURL        string
+	destructionLevel   DestructionLevel = DL_BASIC
+	overallTasksKilled uint64
 )
 
 func init() {

@@ -1,7 +1,7 @@
 package main
 
 import (
-	// "encoding/json"
+	"encoding/json"
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	// "io/ioutil"
@@ -9,11 +9,22 @@ import (
 	"math/rand"
 	"net/http"
 	"strconv"
+	"sync/atomic"
 )
 
 // API nouns
 type NOUN_Stats struct{}
 type NOUN_Rampage struct{}
+
+// JSON payloads
+type StatsResult struct {
+	TasksKilled uint64 `json:"gone"`
+}
+
+type RampageResult struct {
+	Success  bool     `json:"success"`
+	TaskList []string `json:"goners"`
+}
 
 // Handles /stats API calls
 func (n NOUN_Stats) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -26,7 +37,11 @@ func (n NOUN_Stats) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.WithFields(log.Fields{"handle": "/stats"}).Info("... from beginning of time")
 	}
-	fmt.Fprint(w, "not yet implemented")
+	sr := &StatsResult{}
+	sr.TasksKilled = atomic.LoadUint64(&overallTasksKilled)
+	jsonsr, _ := json.Marshal(sr)
+	w.Header().Set("Content-Type", "application/javascript")
+	fmt.Fprint(w, string(jsonsr))
 }
 
 // Handles /rampage API calls
@@ -60,19 +75,21 @@ func (n NOUN_Rampage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // to be killed and randomly kill off a few of them
 func killTasks(w http.ResponseWriter, r *http.Request) {
 	if client, ok := getClient(); ok {
+		nonFrameworkApps := 0
 		apps, err := client.Applications(nil)
 		if err != nil {
 			log.WithFields(log.Fields{"handle": "/rampage"}).Info("Failed to list apps")
 			http.Error(w, "Failed to list apps", 500)
 			return
 		}
-		log.WithFields(log.Fields{"handle": "/rampage"}).Info("Found ", len(apps.Apps), " applications running")
-		b := ""
+		log.WithFields(log.Fields{"handle": "/rampage"}).Info("Found overall ", len(apps.Apps), " applications running")
 		candidates := []string{}
+		rr := &RampageResult{}
 		for _, app := range apps.Apps {
 			log.WithFields(log.Fields{"handle": "/rampage"}).Debug("APP ", app.ID)
 			details, _ := client.Application(app.ID)
 			if !isFramework(details) {
+				nonFrameworkApps++
 				if details.Tasks != nil && len(details.Tasks) > 0 {
 					for _, task := range details.Tasks {
 						log.WithFields(log.Fields{"handle": "/rampage"}).Debug("TASK ", task.ID)
@@ -81,26 +98,28 @@ func killTasks(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-
 		if len(candidates) > 0 {
+			log.WithFields(log.Fields{"handle": "/rampage"}).Info("Found ", len(candidates), " non-framework tasks in ", nonFrameworkApps, " apps to kill")
 			// pick one random task to be killed
 			candidate := candidates[rand.Intn(len(candidates))]
-			ok := killTask(client, candidate)
-			if ok {
-				b += fmt.Sprintf("Killed task %s", candidate)
-			} else {
-				b += fmt.Sprintf("Failed to kill task %s", candidate)
+			rr.Success = killTask(client, candidate)
+			if rr.Success {
+				rr.TaskList = []string{candidate}
+				log.WithFields(log.Fields{"handle": "/rampage"}).Info("Killed tasks ", rr.TaskList)
 			}
 		} else {
-			b = fmt.Sprintf("No task found to kill")
+			rr.Success = false
 		}
-		fmt.Fprint(w, b)
+		jsonrr, _ := json.Marshal(rr)
+		w.Header().Set("Content-Type", "application/javascript")
+		fmt.Fprint(w, string(jsonrr))
 	} else {
 		http.Error(w, "Can't connect to Marathon", 500)
 	}
 }
 
-// killTask kills a certain task
+// killTask kills a certain task and increments
+// the overall count if successful
 func killTask(c marathon.Marathon, taskID string) bool {
 	_, err := c.KillTask(taskID, nil)
 	if err != nil {
@@ -108,6 +127,7 @@ func killTask(c marathon.Marathon, taskID string) bool {
 		return false
 	} else {
 		log.WithFields(log.Fields{"handle": "/rampage"}).Debug("Killed task ", taskID)
+		go incTasksKilled()
 		return true
 	}
 }
@@ -134,4 +154,8 @@ func getClient() (marathon.Marathon, bool) {
 		return nil, false
 	}
 	return client, true
+}
+
+func incTasksKilled() {
+	atomic.AddUint64(&overallTasksKilled, 1)
 }
