@@ -2,12 +2,16 @@
 Package DRAX (DC/OS Resilience Automated Xenodiagnosis) implements a
 chaosmonkey-like testing functionality for DC/OS clusters.
 
-It provides the following functionality:
+To launch it locally use the following:
 
-- Via the environment variable DESTRUCTION_LEVEL the destruction level
-  is set, with 0 == destroy random tasks, 1 == destroy random apps, and
-  2 == destroy random apps and services.
-- It will expose metrics via the `/stats` endpoint.
-- It will expose health status via the `/health` endpoint.
+	$ MARATHON_URL=http://localhost:8080 drax
+
+To launch it into the cluster (via the DC/OS CLI) use:
+
+	$ dcos marathon app add marathon-drax.json
+
+You can then use the API to destroy tasks and check stats,
+see https://github.com/dcos-labs/drax#api for details.
+
 */
 package main

@@ -14,9 +14,11 @@ type DestructionLevel int
 
 const (
 	// DRAX version
-	VERSION string = "0.2.0"
+	VERSION string = "0.3.0"
 	// The IP port DRAX is listening on
 	DRAX_PORT int = 7777
+	// The number of tasks to kill
+	DEFAULT_NUM_TARGETS int = 2
 )
 
 const (
@@ -32,6 +34,7 @@ var (
 	mux                *http.ServeMux
 	marathonURL        string
 	destructionLevel   DestructionLevel = DL_BASIC
+	numTargets         int              = DEFAULT_NUM_TARGETS
 	overallTasksKilled uint64
 )
 
@@ -50,6 +53,12 @@ func init() {
 		destructionLevel = DestructionLevel(l)
 	}
 	log.WithFields(log.Fields{"main": "init"}).Info("On destruction level ", destructionLevel)
+
+	if nt := os.Getenv("NUM_TARGETS"); nt != "" {
+		n, _ := strconv.Atoi(nt)
+		numTargets = n
+	}
+	log.WithFields(log.Fields{"main": "init"}).Info("I will destroy ", numTargets, " tasks on a rampage")
 
 	if ll := os.Getenv("LOG_LEVEL"); ll != "" {
 		switch strings.ToUpper(ll) {

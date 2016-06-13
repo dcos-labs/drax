@@ -1,0 +1,20 @@
+{
+  "id": "drax",
+  "cmd": "chmod u+x drax && ./drax",
+  "cpus": 0.1,
+  "mem": 200,
+  "ports": [
+    0
+  ],
+  "uris": [
+    "https://github.com/dcos-labs/drax/releases/download/0.3.0/drax"
+  ],
+  "env": {
+    "LOG_LEVEL": "DEBUG",
+    "DESTRUCTION_LEVEL": "0",
+    "NUM_TARGETS": "3"
+  },
+  "acceptedResourceRoles": [
+    "slave_public"
+  ]
+}
