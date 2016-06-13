@@ -6,39 +6,74 @@ This is DRAX, the [DC/OS](https://dcos.io) Resilience Automated Xenodiagnosis to
 
 Well, actually DRAX is a reverse acronym inspired by the Guardians of the Galaxy character Drax the Destroyer.
 
+
+You might have heard of http://techblog.netflix.com/2012/07/chaos-monkey-released-into-wild.html 
+
+https://medium.com/production-ready/chaos-monkey-for-fun-and-profit-87e2f343db31
+
+https://www.wehkamplabs.com/blog/2016/06/02/docker-and-zombies/
+
+http://probablyfine.co.uk/2016/05/30/announcing-byte-monkey/
+
+
 ## Installation and usage
 
-From source, which will get you always the latest version:
+### Production
+
+Launch DRAX using the DC/OS CLI via the Marathon app spec provided:
+
+    $ dcos marathon app add marathon-drax.json
+
+Now you can (modulo the public node of your cluster) do the following:
+
+    $ http http://ec2-52-38-188-110.us-west-2.compute.amazonaws.com:7777/stats
+    HTTP/1.1 200 OK
+    Content-Length: 10
+    Content-Type: application/javascript
+    Date: Mon, 13 Jun 2016 14:39:11 GMT
+    
+    {"gone":0}
+
+### Testing and development
+
+Get DRAX and build from source:
 
     $ go get github.com/dcos-labs/drax
     $ go build
     $ ./drax
+    INFO[0000] Using Marathon at  http://localhost:8080      main=init
     INFO[0000] On destruction level 0                        main=init
-    This is DRAX in version 0.1.0 listening on port 7777 with default level 0
+    INFO[0000] I will destroy 2 tasks on a rampage           main=init
+    INFO[0000] This is DRAX in version 0.3.0 listening on port 7777
 
-Via Marathon app spec:
+And in a different shell:
 
-    $ dcos marathon app add marathon-drax.json
+    $ http http://localhost:7777/stats
+    HTTP/1.1 200 OK
+    Content-Length: 10
+    Content-Type: application/javascript
+    Date: Mon, 13 Jun 2016 14:39:11 GMT
+    
+    {"gone":0}
 
 ### Dependencies
 
 - [DC/OS 1.7](https://dcos.io/releases/1.7.0/)
-- [github.com/gambol99/go-marathon](https://github.com/gambol99/go-marathon), an API library for working with Marathon.
-- [github.com/Sirupsen/logrus](https://github.com/Sirupsen/logrus), a logging library.
+- (DEV) [github.com/gambol99/go-marathon](https://github.com/gambol99/go-marathon), an API library for working with Marathon.
+- (DEV) [github.com/Sirupsen/logrus](https://github.com/Sirupsen/logrus), a logging library.
 
 ### Configuration
 
-You can influence what DRAX is supposed to destroy via the env variable `DESTRUCTION_LEVEL`: 
+You can influence the default destruction setting for DRAX via the env variable `DESTRUCTION_LEVEL`: 
 
-    0 == destroy random tasks
-    1 == destroy random task of specific app
-    2 == destroy random apps and services
-
-So for example you want DRAX to totally go berserk, use this to launch it from the command line: `DESTRUCTION_LEVEL=2 drax`.
+    0 == destroy random tasks of any app
+    1 == destroy random tasks of specific app
 
 Next, you can influence how many tasks DRAX is supposed to destroy in one rampage via the env variable `NUM_TARGETS`, for example `NUM_TARGETS=5 drax` means that (up to) 5 tasks will be destroyed, unless the overall number of tasks is less, of course.
 
-Further, in order to influence the log level, use the `LOG_LEVEL` env variable, for example `LOG_LEVEL=DEBUG drax` would give you fine-grained log messages.
+Lastly, in order to influence the log level, use the `LOG_LEVEL` env variable, for example `LOG_LEVEL=DEBUG drax` would give you fine-grained log messages.
+
+Note that above environments variables are pre-set in the [Marathon app spec](marathon-drax.json) and yours to overwrite.
 
 ## API
 
@@ -49,6 +84,14 @@ Will return a HTTP 200 code and `I am Groot` if DRAX is healthy.
 ### /stats [GET]
 
 Will return runtime statistics, such as killed containers or apps over a report period specified with the `runs` parameter. For example, `/stats?runs=2` will report over the past two runs and if the `runs` parameter is not or wrongly specified it will report from the beginning of time (well, beginning of time for DRAX anyways).
+
+    $ http http://localhost:7777/stats
+    HTTP/1.1 200 OK
+    Content-Length: 10
+    Content-Type: application/javascript
+    Date: Mon, 13 Jun 2016 14:39:11 GMT
+    
+    {"gone":2}
 
 ### /rampage [POST]
 
