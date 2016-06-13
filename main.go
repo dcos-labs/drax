@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 )
 
 // destruction level type (0 .. 2)
@@ -39,6 +40,17 @@ func init() {
 		destructionLevel = DestructionLevel(l)
 	}
 	log.WithFields(log.Fields{"main": "init"}).Info("On destruction level ", destructionLevel)
+
+	if ll := os.Getenv("LOG_LEVEL"); ll != "" {
+		switch strings.ToUpper(ll) {
+		case "DEBUG":
+			log.SetLevel(log.DebugLevel)
+		case "INFO":
+			log.SetLevel(log.InfoLevel)
+		default:
+			log.SetLevel(log.ErrorLevel)
+		}
+	}
 }
 
 func main() {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	// "io/ioutil"
+	marathon "github.com/gambol99/go-marathon"
 	"net/http"
 	"strconv"
 )
@@ -40,7 +41,7 @@ func (n NOUN_Rampage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		switch destructionLevel {
 		case DL_BASIC:
-			fmt.Fprint(w, "killed some random tasks")
+			killTasks(w, r)
 		case DL_ADVANCED:
 			fmt.Fprint(w, "not yet implemented")
 		case DL_ALL:
@@ -52,4 +53,38 @@ func (n NOUN_Rampage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{"handle": "/rampage"}).Error("Only POST method supported")
 		http.NotFound(w, r)
 	}
+}
+
+func killTasks(w http.ResponseWriter, r *http.Request) {
+	marathonURL := "http://localhost:8080"
+	config := marathon.NewDefaultConfig()
+	config.URL = marathonURL
+	client, err := marathon.NewClient(config)
+	if err != nil {
+		log.WithFields(log.Fields{"handle": "/rampage"}).Error("Failed to create Marathon client due to ", err)
+		http.NotFound(w, r)
+		return
+	}
+	applications, err := client.Applications(nil)
+	if err != nil {
+		log.Fatalf("Failed to list apps")
+		log.WithFields(log.Fields{"handle": "/rampage"}).Info("Failed to list apps")
+		fmt.Fprint(w, "Failed to list apps")
+		return
+	}
+	log.WithFields(log.Fields{"handle": "/rampage"}).Info("Found ", len(applications.Apps), " applications running")
+	b := ""
+	for _, application := range applications.Apps {
+		log.WithFields(log.Fields{"handle": "/rampage"}).Debug("APP ", application.ID)
+		details, _ := client.Application(application.ID)
+		if details.Tasks != nil && len(details.Tasks) > 0 {
+			health, _ := client.ApplicationOK(details.ID)
+			b += fmt.Sprintf("Application: %s is healthy: %t\n", details.ID, health)
+			for _, task := range details.Tasks {
+				log.WithFields(log.Fields{"handle": "/rampage"}).Debug("TASK ", task.ID)
+				b += fmt.Sprintf(" Task: %s\n", task.ID)
+			}
+		}
+	}
+	fmt.Fprint(w, b)
 }
