@@ -31,10 +31,19 @@ const (
 var (
 	mux              *http.ServeMux
 	destructionLevel DestructionLevel = DL_BASIC
+	marathonURL      string
 )
 
 func init() {
 	mux = http.NewServeMux()
+
+	// per default, use the cluster-internal, non-auth endpoint:
+	marathonURL = "http://marathon.mesos:8080"
+	if murl := os.Getenv("MARATHON_URL"); murl != "" {
+		marathonURL = murl
+	}
+	log.WithFields(log.Fields{"main": "init"}).Info("Using Marathon at  ", marathonURL)
+
 	if dl := os.Getenv("DESTRUCTION_LEVEL"); dl != "" {
 		l, _ := strconv.Atoi(dl)
 		destructionLevel = DestructionLevel(l)
@@ -54,7 +63,7 @@ func init() {
 }
 
 func main() {
-	fmt.Printf("This is DRAX in version %s listening on port %d with default destruction level %v\n", VERSION, DRAX_PORT, DL_BASIC)
+	log.Info("This is DRAX in version ", VERSION, " listening on port ", DRAX_PORT)
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		log.WithFields(log.Fields{"handle": "/health"}).Info("health check")
 		fmt.Fprint(w, "I am Groot")

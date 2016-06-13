@@ -55,36 +55,44 @@ func (n NOUN_Rampage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// killTasks will identify tasks from apps (not framework service)
+// to be killed and randomly kill off a few of them
 func killTasks(w http.ResponseWriter, r *http.Request) {
-	marathonURL := "http://localhost:8080"
+	if client, ok := getClient(); ok {
+		applications, err := client.Applications(nil)
+		if err != nil {
+			log.WithFields(log.Fields{"handle": "/rampage"}).Info("Failed to list apps")
+			http.Error(w, "Failed to list apps", 500)
+			return
+		}
+		log.WithFields(log.Fields{"handle": "/rampage"}).Info("Found ", len(applications.Apps), " applications running")
+		b := ""
+		for _, application := range applications.Apps {
+			log.WithFields(log.Fields{"handle": "/rampage"}).Debug("APP ", application.ID)
+			details, _ := client.Application(application.ID)
+			if details.Tasks != nil && len(details.Tasks) > 0 {
+				health, _ := client.ApplicationOK(details.ID)
+				b += fmt.Sprintf("Application: %s is healthy: %t\n", details.ID, health)
+				for _, task := range details.Tasks {
+					log.WithFields(log.Fields{"handle": "/rampage"}).Debug("TASK ", task.ID)
+					b += fmt.Sprintf(" Task: %s\n", task.ID)
+				}
+			}
+		}
+		fmt.Fprint(w, b)
+	} else {
+		http.Error(w, "Can't connect to Marathon", 500)
+	}
+}
+
+// getClient tries to get a connection to the DC/OS System Marathon
+func getClient() (marathon.Marathon, bool) {
 	config := marathon.NewDefaultConfig()
 	config.URL = marathonURL
 	client, err := marathon.NewClient(config)
 	if err != nil {
 		log.WithFields(log.Fields{"handle": "/rampage"}).Error("Failed to create Marathon client due to ", err)
-		http.NotFound(w, r)
-		return
+		return nil, false
 	}
-	applications, err := client.Applications(nil)
-	if err != nil {
-		log.Fatalf("Failed to list apps")
-		log.WithFields(log.Fields{"handle": "/rampage"}).Info("Failed to list apps")
-		fmt.Fprint(w, "Failed to list apps")
-		return
-	}
-	log.WithFields(log.Fields{"handle": "/rampage"}).Info("Found ", len(applications.Apps), " applications running")
-	b := ""
-	for _, application := range applications.Apps {
-		log.WithFields(log.Fields{"handle": "/rampage"}).Debug("APP ", application.ID)
-		details, _ := client.Application(application.ID)
-		if details.Tasks != nil && len(details.Tasks) > 0 {
-			health, _ := client.ApplicationOK(details.ID)
-			b += fmt.Sprintf("Application: %s is healthy: %t\n", details.ID, health)
-			for _, task := range details.Tasks {
-				log.WithFields(log.Fields{"handle": "/rampage"}).Debug("TASK ", task.ID)
-				b += fmt.Sprintf(" Task: %s\n", task.ID)
-			}
-		}
-	}
-	fmt.Fprint(w, b)
+	return client, true
 }
