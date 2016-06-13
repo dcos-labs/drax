@@ -52,7 +52,12 @@ Will return runtime statistics, such as killed containers or apps over a report 
 
 Will trigger a destruction run on the current destruction level (see configuration section, above). You can explicitly set the level of destruction using the `level` parameter, for example, `/rampage?level=1` will destroy random apps (but no services/frameworks).
 
+
+Test locally:
+
     $ MARATHON_URL=http://localhost:8080 drax
+
+And:
 
     $ http POST localhost:7777/rampage
     HTTP/1.1 200 OK

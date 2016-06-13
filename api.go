@@ -6,6 +6,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	// "io/ioutil"
 	marathon "github.com/gambol99/go-marathon"
+	"math/rand"
 	"net/http"
 	"strconv"
 )
@@ -59,30 +60,68 @@ func (n NOUN_Rampage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // to be killed and randomly kill off a few of them
 func killTasks(w http.ResponseWriter, r *http.Request) {
 	if client, ok := getClient(); ok {
-		applications, err := client.Applications(nil)
+		apps, err := client.Applications(nil)
 		if err != nil {
 			log.WithFields(log.Fields{"handle": "/rampage"}).Info("Failed to list apps")
 			http.Error(w, "Failed to list apps", 500)
 			return
 		}
-		log.WithFields(log.Fields{"handle": "/rampage"}).Info("Found ", len(applications.Apps), " applications running")
+		log.WithFields(log.Fields{"handle": "/rampage"}).Info("Found ", len(apps.Apps), " applications running")
 		b := ""
-		for _, application := range applications.Apps {
-			log.WithFields(log.Fields{"handle": "/rampage"}).Debug("APP ", application.ID)
-			details, _ := client.Application(application.ID)
-			if details.Tasks != nil && len(details.Tasks) > 0 {
-				health, _ := client.ApplicationOK(details.ID)
-				b += fmt.Sprintf("Application: %s is healthy: %t\n", details.ID, health)
-				for _, task := range details.Tasks {
-					log.WithFields(log.Fields{"handle": "/rampage"}).Debug("TASK ", task.ID)
-					b += fmt.Sprintf(" Task: %s\n", task.ID)
+		candidates := []string{}
+		for _, app := range apps.Apps {
+			log.WithFields(log.Fields{"handle": "/rampage"}).Debug("APP ", app.ID)
+			details, _ := client.Application(app.ID)
+			if !isFramework(details) {
+				if details.Tasks != nil && len(details.Tasks) > 0 {
+					for _, task := range details.Tasks {
+						log.WithFields(log.Fields{"handle": "/rampage"}).Debug("TASK ", task.ID)
+						candidates = append(candidates, task.ID)
+					}
 				}
 			}
+		}
+
+		if len(candidates) > 0 {
+			// pick one random task to be killed
+			candidate := candidates[rand.Intn(len(candidates))]
+			ok := killTask(client, candidate)
+			if ok {
+				b += fmt.Sprintf("Killed task %s", candidate)
+			} else {
+				b += fmt.Sprintf("Failed to kill task %s", candidate)
+			}
+		} else {
+			b = fmt.Sprintf("No task found to kill")
 		}
 		fmt.Fprint(w, b)
 	} else {
 		http.Error(w, "Can't connect to Marathon", 500)
 	}
+}
+
+// killTask kills a certain task
+func killTask(c marathon.Marathon, taskID string) bool {
+	_, err := c.KillTask(taskID, nil)
+	if err != nil {
+		log.WithFields(log.Fields{"handle": "/rampage"}).Debug("Not able to kill task ", taskID)
+		return false
+	} else {
+		log.WithFields(log.Fields{"handle": "/rampage"}).Debug("Killed task ", taskID)
+		return true
+	}
+}
+
+// isFramework returns true if the Marathon app is a service framework,
+// and false otherwise (determined via the DCOS_PACKAGE_IS_FRAMEWORK label key)
+func isFramework(app *marathon.Application) bool {
+	for k, v := range *app.Labels {
+		log.WithFields(log.Fields{"handle": "/rampage"}).Debug("LABEL ", k, ":", v)
+		if k == "DCOS_PACKAGE_IS_FRAMEWORK" && v == "true" {
+			return true
+		}
+	}
+	return false
 }
 
 // getClient tries to get a connection to the DC/OS System Marathon
