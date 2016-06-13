@@ -18,16 +18,19 @@ type NOUN_Stats struct{}
 type NOUN_Rampage struct{}
 
 // JSON payloads
+type RampageParams struct {
+	Level string `json:"level"`
+	AppID string `json:"app"`
+}
 type StatsResult struct {
 	TasksKilled uint64 `json:"gone"`
 }
-
 type RampageResult struct {
 	Success  bool     `json:"success"`
 	TaskList []string `json:"goners"`
 }
 
-// Handles /stats API calls
+// Handles /stats API calls (GET only)
 func (n NOUN_Stats) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.WithFields(log.Fields{"handle": "/stats"}).Info("Reporting on runtime statistics ...")
 	// extract $RUNS parameter from /stats?runs=$RUNS in the following:
@@ -45,14 +48,18 @@ func (n NOUN_Stats) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, string(jsonsr))
 }
 
-// Handles /rampage API calls
+// Handles /rampage API calls (POST only)
 func (n NOUN_Rampage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		err := r.ParseForm()
 		if err != nil {
 			http.Error(w, "Can't parse rampage params", 500)
 		} else {
-			levelParam := r.Form.Get("level")
+			ok, rp := parseRampageParams(r)
+			if !ok {
+				http.Error(w, "Can't decode rampage params", 500)
+			}
+			levelParam := rp.Level
 			if levelParam != "" {
 				log.WithFields(log.Fields{"handle": "/rampage"}).Info("Got level param ", levelParam)
 				if level, err := strconv.Atoi(levelParam); err == nil {
@@ -64,7 +71,7 @@ func (n NOUN_Rampage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			case DL_BASIC:
 				killTasks(w, r)
 			case DL_ADVANCED:
-				appParam := r.Form.Get("app")
+				appParam := rp.AppID
 				if appParam != "" {
 					log.WithFields(log.Fields{"handle": "/rampage"}).Info("Got app param ", appParam)
 					killTasksOfApp(w, r, appParam)
@@ -80,6 +87,18 @@ func (n NOUN_Rampage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		log.WithFields(log.Fields{"handle": "/rampage"}).Error("Only POST method supported")
 		http.NotFound(w, r)
+	}
+}
+
+// parseRampageParams parses the parameters for a rampage from an HTTP request
+func parseRampageParams(r *http.Request) (bool, *RampageParams) {
+	decoder := json.NewDecoder(r.Body)
+	rp := &RampageParams{}
+	err := decoder.Decode(rp)
+	if err != nil {
+		return false, nil
+	} else {
+		return true, rp
 	}
 }
 

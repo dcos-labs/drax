@@ -80,6 +80,18 @@ To test it locally, run:
 
     $ MARATHON_URL=http://localhost:8080 drax
 
-And invoke like so (to destroy tasks of app `/dummy`)
+And invoke like so (to destroy tasks of app `/dummy`):
 
-    $ http -f POST localhost:7777/rampage -- level=1 app=dummy
+    $ cat rp.json
+    {
+     "level" : "1",
+     "app" : "dummy"
+    }
+    $ http POST localhost:7777/rampage < rp.json
+    HTTP/1.1 200 OK
+    Content-Length: 117
+    Content-Type: application/javascript
+    Date: Mon, 13 Jun 2016 13:05:31 GMT
+    
+    {"success":true,"goners":["dummy.59dca877-3165-11e6-aad0-1e9bbbc1653f","dummy.e96ffce3-3164-11e6-aad0-1e9bbbc1653f"]}
+
