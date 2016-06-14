@@ -1,0 +1,23 @@
+{
+    "id": "webserver",
+    "instances": 5,
+    "cpus": 0.1,
+    "mem": 80,
+    "container": {
+        "type": "DOCKER",
+        "docker": {
+            "image": "nginx:1.9",
+            "network": "BRIDGE",
+            "portMappings": [
+                {
+                    "containerPort": 80,
+                    "hostPort": 0
+                }
+            ]
+        }
+    },
+    "acceptedResourceRoles": [
+        "slave_public",
+        "*"
+    ]
+}

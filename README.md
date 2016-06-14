@@ -70,6 +70,13 @@ Lastly, in order to influence the log level, use the `LOG_LEVEL` env variable, f
 
 Note that above environments variables are pre-set in the [Marathon app spec](marathon-drax.json) and yours to overwrite.
 
+### Roadmap
+
+- add seeds (hello world dummy, NGINX, Marvin): shell script + DC/OS CLI
+- Weave [Scope](https://www.weave.works/products/weave-scope/) demo
+- tests, tutorial, blog post
+- node/cluster level rampages
+
 ## API
 
 ### /health [GET]
