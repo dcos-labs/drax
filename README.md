@@ -13,6 +13,8 @@ DRAX is a DC/OS-specific resilience testing tool that works mainly on the task-l
 
 ## Installation and usage
 
+Note that DRAX assumes a running [DC/OS 1.7](https://dcos.io/releases/1.7.0/) cluster.
+
 ### Production
 
 Launch DRAX using the DC/OS CLI via the Marathon app spec provided:
@@ -35,13 +37,13 @@ Get DRAX and build from source:
 
     $ go get github.com/dcos-labs/drax
     $ go build
-    $ $ MARATHON_URL=http://localhost:8080 ./drax
+    $ MARATHON_URL=http://localhost:8080 ./drax
     INFO[0000] Using Marathon at  http://localhost:8080      main=init
     INFO[0000] On destruction level 0                        main=init
     INFO[0000] I will destroy 2 tasks on a rampage           main=init
     INFO[0000] This is DRAX in version 0.3.0 listening on port 7777
 
-And in a different shell:
+And in a different terminal session:
 
     $ http http://localhost:7777/stats
     HTTP/1.1 200 OK
@@ -51,28 +53,33 @@ And in a different shell:
     
     {"gone":0}
 
-### Dependencies
+For Go development, be aware of the following dependencies (not using explicit vendoring ATM):
 
-- [DC/OS 1.7](https://dcos.io/releases/1.7.0/)
-- (DEV) [github.com/gambol99/go-marathon](https://github.com/gambol99/go-marathon), an API library for working with Marathon.
-- (DEV) [github.com/Sirupsen/logrus](https://github.com/Sirupsen/logrus), a logging library.
+- [github.com/gambol99/go-marathon](https://github.com/gambol99/go-marathon), an API library for working with Marathon.
+- [github.com/Sirupsen/logrus](https://github.com/Sirupsen/logrus), a logging library.
 
 ### Configuration
+
+Note that the following environment variables are pre-set in the [Marathon app spec](marathon-drax.json) and yours to overwrite.
+
+#### Destruction level
 
 You can influence the default destruction setting for DRAX via the env variable `DESTRUCTION_LEVEL`: 
 
     0 == destroy random tasks of any app
     1 == destroy random tasks of specific app
 
-Next, you can influence how many tasks DRAX is supposed to destroy in one rampage via the env variable `NUM_TARGETS`, for example `NUM_TARGETS=5 drax` means that (up to) 5 tasks will be destroyed, unless the overall number of tasks is less, of course.
+#### Number of target tasks
 
-Lastly, in order to influence the log level, use the `LOG_LEVEL` env variable, for example `LOG_LEVEL=DEBUG drax` would give you fine-grained log messages.
+To specify how many tasks DRAX is supposed to destroy in one rampage, use `NUM_TARGETS`. For example, `NUM_TARGETS=5 drax` means that (up to) 5 tasks will be destroyed, unless the overall number of tasks is less, of course.
 
-Note that above environments variables are pre-set in the [Marathon app spec](marathon-drax.json) and yours to overwrite.
+#### Log level
+
+To influence the log level, use the `LOG_LEVEL` env variable, for example `LOG_LEVEL=DEBUG drax` would give you fine-grained log messages (defaults to `INFO`).
 
 ### Roadmap
 
-- add seeds (hello world dummy, NGINX, Marvin): shell script + DC/OS CLI
+- add seeds (hello world dummy, NGINX, Marvin): shell script + DC/OS CLI and walkthrough examples
 - Weave [Scope](https://www.weave.works/products/weave-scope/) demo
 - tests, tutorial, blog post
 - node/cluster level rampages
