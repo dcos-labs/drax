@@ -1,0 +1,20 @@
+{
+  "id": "rampage",
+  "run": {
+    "cpus": 0.1,
+    "mem": 128,
+    "disk": 0,
+    "cmd": "http POST http://drax.marathon.l4lb.thisdcos.directory:7777/rampage",
+    "docker": {
+      "image": "clue/httpie"
+    }
+  },
+  "schedules": [
+    {
+      "id": "default",
+      "enabled": true,
+      "cron": "0 9-17 * * 1-5",
+      "concurrencyPolicy": "ALLOW"
+    }
+  ]
+}

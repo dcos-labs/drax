@@ -1,20 +1,38 @@
 {
-  "id": "drax",
+  "id": "/drax",
   "cmd": "chmod u+x drax && ./drax",
+  "instances": 1,
   "cpus": 0.1,
   "mem": 200,
-  "ports": [
-    0
+  "fetch": [
+    {
+      "uri": "https://github.com/dcos-labs/drax/releases/download/0.4.0/drax"
+    }
   ],
-  "uris": [
-    "https://github.com/dcos-labs/drax/releases/download/0.3.0/drax"
+  "healthChecks": [
+    {
+      "portIndex": 0,
+      "path": "/health",
+      "protocol": "MESOS_HTTP"
+    }
   ],
+  "acceptedResourceRoles": [
+    "slave_public"
+  ],
+  "portDefinitions": [
+    {
+      "port": 7777,
+      "protocol": "tcp",
+      "name": "default",
+      "labels": {
+        "VIP_0": "/drax:7777"
+      }
+    }
+  ],
+  "requirePorts": true,
   "env": {
     "LOG_LEVEL": "DEBUG",
     "DESTRUCTION_LEVEL": "0",
     "NUM_TARGETS": "3"
-  },
-  "acceptedResourceRoles": [
-    "slave_public"
-  ]
+  }
 }
