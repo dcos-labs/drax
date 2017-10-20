@@ -6,7 +6,7 @@
     "disk": 0,
     "cmd": "http POST http://drax.marathon.l4lb.thisdcos.directory:7777/rampage",
     "docker": {
-      "image": "clue/httpie"
+      "image": "alpine/httpie"
     }
   },
   "schedules": [
